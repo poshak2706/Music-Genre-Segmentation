@@ -45,27 +45,4 @@ data_spark = spark.createDataFrame(data_cleaned)
 vec_assembler = VectorAssembler(inputCols=features, outputCol="features")
 data_spark_vec = vec_assembler.transform(data_spark)
 
-# KMeans Clustering with k=5 (Example)
-kmeans = KMeans(k=5, seed=1)
-model_kmeans = kmeans.fit(data_spark_vec)
-data_clustered = model_kmeans.transform(data_spark_vec)
 
-# Assign clusters to genres (genre segmentation)
-data_clustered.select("playlist_genre", "prediction").show()
-
-# Dimensionality Reduction for Visualization (PCA)
-pca = PCA(n_components=2)
-data_pca = pca.fit_transform(data_cleaned[features])
-data_cleaned['pca1'] = data_pca[:, 0]
-data_cleaned['pca2'] = data_pca[:, 1]
-data_cleaned['cluster'] = data_clustered.toPandas()['prediction']
-
-# Visualize KMeans Clustering Results
-plt.figure(figsize=(10, 6))
-sns.scatterplot(x='pca1', y='pca2', hue='cluster', data=data_cleaned, palette='Set1', s=100)
-plt.title("KMeans Clustering (PCA-Reduced Features)")
-plt.show()
-
-# Compute Silhouette Score for KMeans Clustering
-silhouette_avg = silhouette_score(data_cleaned[features], data_cleaned['cluster'])
-print(f"Silhouette Score for KMeans clustering: {silhouette_avg}")
