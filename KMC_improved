@@ -1,0 +1,17 @@
+# Import necessary libraries
+import pandas as pd
+from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score
+from sklearn.cluster import KMeans  # Use sklearn's KMeans
+# from pyspark.ml.clustering import KMeans  # Commented out the PySpark KMeans
+
+# ... (previous code) ...
+
+# Apply KMeans clustering on the PCA-transformed data
+kmeans = KMeans(n_clusters=5, random_state=1) # Changed k to n_clusters, added random_state
+model_kmeans = kmeans.fit(pca_features)
+
+# Calculate silhouette score for the PCA-reduced features
+data_cleaned['cluster'] = model_kmeans.labels_  # Changed from transform to labels_
+silhouette_avg = silhouette_score(pca_features, data_cleaned['cluster'])
+print(f"Silhouette Score after PCA: {silhouette_avg}")
