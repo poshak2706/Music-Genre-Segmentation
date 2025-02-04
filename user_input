@@ -1,0 +1,16 @@
+# Example: Get recommendations based on user input
+def recommend_songs():
+    song_name = input("Enter the name of the song you want recommendations for: ") or "Body On My"
+    recommendations = get_song_recommendations(song_name)
+
+    if isinstance(recommendations, str):
+        print(recommendations)
+    else:
+        print(f"Recommended songs based on '{song_name}':")
+        print(recommendations)
+
+# Run the recommendation system to prompt user for song input
+recommend_songs()
+
+# Stop the Spark session after completion
+spark.stop()
