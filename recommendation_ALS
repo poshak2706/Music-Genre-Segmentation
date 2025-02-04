@@ -1,0 +1,34 @@
+# ALS Recommendation System (Collaborative Filtering)
+data['userId'] = pd.factorize(data['playlist_id'])[0]
+data['trackId'] = pd.factorize(data['track_id'])[0]
+data['rating'] = data['track_popularity']  # Use track popularity as proxy for rating
+
+data_spark_als = spark.createDataFrame(data[['userId', 'trackId', 'rating']])
+
+# ALS model for recommendations
+als = ALS(maxIter=10, regParam=0.1, userCol="userId", itemCol="trackId", ratingCol="rating", coldStartStrategy="drop")
+model_als = als.fit(data_spark_als)
+
+# Recommend top 10 items for a user (using userId 1 as example)
+user_recommendations = model_als.recommendForAllUsers(10)
+user_recommendations.show()
+
+# Function for Content-Based Recommendations (Cosine Similarity)
+def get_song_recommendations(song_name, num_recommendations=10):
+
+    # Remove duplicate entries based on the 'track_name' column
+    data_recommendation = data_cleaned.drop_duplicates(subset='track_name')
+
+    song_data = data_recommendation[data_recommendation['track_name'].str.lower() == song_name.lower()]
+
+    if song_data.empty:
+        return "Song not found in the dataset."
+
+    song_index = song_data.index[0]
+
+    # Compute cosine similarity between the selected song and all other songs
+    cosine_sim = cosine_similarity([data_cleaned.loc[song_index, features]], data_cleaned[features])
+
+    # Get the top N most similar songs (excluding the song itself)
+    similar_songs = cosine_sim.argsort()[0][-num_recommendations-1:-1][::-1]
+    return data_cleaned.iloc[similar_songs][['track_name', 'track_artist', 'playlist_genre']]
