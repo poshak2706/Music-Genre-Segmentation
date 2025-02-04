@@ -1,0 +1,71 @@
+!pip install pyspark
+# Import necessary libraries
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import MinMaxScaler
+from pyspark.sql import SparkSession
+from pyspark.ml.clustering import KMeans
+from pyspark.ml.feature import VectorAssembler
+from pyspark.ml.recommendation import ALS
+from pyspark.ml.evaluation import RegressionEvaluator
+from sklearn.decomposition import PCA  # For dimensionality reduction
+from sklearn.metrics import silhouette_score  # For silhouette evaluation
+
+# Initialize Spark session
+spark = SparkSession.builder.appName("MusicRecommendationSystem").getOrCreate()
+
+# Load your dataset
+data = pd.read_csv('/content/spotify dataset.csv')
+
+
+
+# Preprocessing for KMeans Clustering (Genre Segmentation)
+features = ['tempo', 'loudness', 'valence', 'danceability', 'energy', 'acousticness']
+
+# Drop rows with missing values for these features
+data_cleaned = data.dropna(subset=features)
+
+# Normalize the features for clustering
+scaler = MinMaxScaler()
+data_cleaned[features] = scaler.fit_transform(data_cleaned[features])
+
+# Visualize Preprocessing - Acoustic Features
+plt.figure(figsize=(10, 6))
+sns.boxplot(data=data_cleaned[features])
+plt.title("Distribution of Acoustic Features After Normalization")
+plt.xticks(rotation=45)
+plt.show()
+
+# Convert to Spark DataFrame for KMeans Clustering
+data_spark = spark.createDataFrame(data_cleaned)
+
+# VectorAssembler to convert features into a vector for KMeans
+vec_assembler = VectorAssembler(inputCols=features, outputCol="features")
+data_spark_vec = vec_assembler.transform(data_spark)
+
+# KMeans Clustering with k=5 (Example)
+kmeans = KMeans(k=5, seed=1)
+model_kmeans = kmeans.fit(data_spark_vec)
+data_clustered = model_kmeans.transform(data_spark_vec)
+
+# Assign clusters to genres (genre segmentation)
+data_clustered.select("playlist_genre", "prediction").show()
+
+# Dimensionality Reduction for Visualization (PCA)
+pca = PCA(n_components=2)
+data_pca = pca.fit_transform(data_cleaned[features])
+data_cleaned['pca1'] = data_pca[:, 0]
+data_cleaned['pca2'] = data_pca[:, 1]
+data_cleaned['cluster'] = data_clustered.toPandas()['prediction']
+
+# Visualize KMeans Clustering Results
+plt.figure(figsize=(10, 6))
+sns.scatterplot(x='pca1', y='pca2', hue='cluster', data=data_cleaned, palette='Set1', s=100)
+plt.title("KMeans Clustering (PCA-Reduced Features)")
+plt.show()
+
+# Compute Silhouette Score for KMeans Clustering
+silhouette_avg = silhouette_score(data_cleaned[features], data_cleaned['cluster'])
+print(f"Silhouette Score for KMeans clustering: {silhouette_avg}")
